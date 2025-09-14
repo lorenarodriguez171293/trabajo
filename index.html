@@ -15,7 +15,7 @@
       color: #1e3a8a;
     }
     .container {
-      max-width: 600px;
+      max-width: 700px;
       margin: auto;
       background: white;
       padding: 20px;
@@ -54,6 +54,57 @@
       background: #e0f2fe;
       border-radius: 8px;
     }
+    .animacion {
+      margin-top: 30px;
+      width: 100%;
+      height: 120px;
+      background: #e5e7eb;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .objeto {
+      width: 40px;
+      height: 40px;
+      background: #f43f5e;
+      border-radius: 6px;
+      position: absolute;
+      top: 40px;
+      left: 0;
+    }
+    .rastro {
+      width: 6px;
+      height: 6px;
+      background: #1e3a8a;
+      border-radius: 50%;
+      position: absolute;
+      top: 54px; /* centrado con respecto al objeto */
+    }
+    .tiempo {
+      font-size: 10px;
+      color: #111;
+      position: absolute;
+      top: 65px;
+      white-space: nowrap;
+      transform: translateX(-50%);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+    th {
+      background: #2563eb;
+      color: white;
+    }
+    tbody tr:nth-child(even) {
+      background: #f1f5f9;
+    }
   </style>
 </head>
 <body>
@@ -74,6 +125,21 @@
     <button onclick="calcular()">Calcular</button>
 
     <div class="resultados" id="resultados"></div>
+
+    <div class="animacion" id="animacion">
+      <div class="objeto" id="objeto"></div>
+    </div>
+
+    <h3>Tabla de datos (posición vs tiempo)</h3>
+    <table id="tabla">
+      <thead>
+        <tr>
+          <th>Tiempo (s)</th>
+          <th>Posición (m)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <script>
@@ -91,6 +157,17 @@
       const F_neta = fuerza - F_friccion;
 
       let resultados = "";
+      const objeto = document.getElementById("objeto");
+      const animacion = document.getElementById("animacion");
+
+      // Reinicia posición y borra rastros anteriores
+      objeto.style.left = "0px";
+      const rastros = animacion.querySelectorAll(".rastro, .tiempo");
+      rastros.forEach(r => r.remove());
+
+      // Reinicia tabla
+      const tbody = document.querySelector("#tabla tbody");
+      tbody.innerHTML = "";
 
       if (F_neta <= 0) {
         resultados += `<p>El objeto no se mueve porque la fricción es mayor o igual a la fuerza aplicada.</p>`;
@@ -98,13 +175,58 @@
         // Aceleración neta
         const a = F_neta / masa;
 
-        // Ecuación del movimiento rectilíneo uniformemente acelerado:
-        // d = (1/2) * a * t²
+        // Tiempo para recorrer la distancia
         const tiempo = Math.sqrt((2 * distancia) / a);
 
         resultados += `<p><b>Aceleración neta:</b> ${a.toFixed(2)} m/s²</p>`;
         resultados += `<p><b>Tiempo en recorrer ${distancia} m:</b> ${tiempo.toFixed(2)} s</p>`;
         resultados += `<p><b>Desplazamiento total:</b> ${distancia} m</p>`;
+
+        // --- Animación ---
+        const ancho = animacion.clientWidth - objeto.clientWidth; // espacio en px
+        const escala = ancho / distancia; // px por metro
+
+        let inicio = null;
+        let ultimaMarca = 0;
+
+        function mover(timestamp) {
+          if (!inicio) inicio = timestamp;
+          let t = (timestamp - inicio) / 1000; // segundos
+          if (t > tiempo) t = tiempo;
+
+          // x = 1/2 * a * t²
+          let x = 0.5 * a * t * t;
+          let px = x * escala;
+
+          objeto.style.left = px + "px";
+
+          // Dejar rastros y guardar datos cada 10% de la distancia
+          if (x - ultimaMarca >= distancia / 10 || t === tiempo) {
+            const marca = document.createElement("div");
+            marca.classList.add("rastro");
+            marca.style.left = px + "px";
+
+            const etiqueta = document.createElement("div");
+            etiqueta.classList.add("tiempo");
+            etiqueta.style.left = px + "px";
+            etiqueta.innerText = t.toFixed(1) + " s";
+
+            animacion.appendChild(marca);
+            animacion.appendChild(etiqueta);
+
+            // Agregar fila a la tabla
+            const fila = document.createElement("tr");
+            fila.innerHTML = `<td>${t.toFixed(1)}</td><td>${x.toFixed(2)}</td>`;
+            tbody.appendChild(fila);
+
+            ultimaMarca = x;
+          }
+
+          if (t < tiempo) {
+            requestAnimationFrame(mover);
+          }
+        }
+        requestAnimationFrame(mover);
       }
 
       document.getElementById("resultados").innerHTML = resultados;
