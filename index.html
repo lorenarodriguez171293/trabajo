@@ -125,11 +125,20 @@
 
     <div id="tabla-container"></div>
 
-    <canvas id="grafico"></canvas>
+    <h3>Gráfico Posición vs Tiempo</h3>
+    <canvas id="graficoPos"></canvas>
+
+    <h3>Gráfico Velocidad vs Tiempo</h3>
+    <canvas id="graficoVel"></canvas>
+
+    <h3>Gráfico Aceleración vs Tiempo</h3>
+    <canvas id="graficoAcc"></canvas>
   </div>
 
   <script>
-    let chart = null;
+    let chartPos = null;
+    let chartVel = null;
+    let chartAcc = null;
 
     function calcular() {
       const masa = parseFloat(document.getElementById("masa").value);
@@ -171,28 +180,32 @@
       }
       requestAnimationFrame(animar);
 
-      // Tabla de datos
+      // Tabla de datos + arrays para gráficos
       let tablaHTML = "<h3>Datos experimentales simulados</h3>";
-      tablaHTML += "<table><tr><th>Tiempo (s)</th><th>Posición (m)</th></tr>";
+      tablaHTML += "<table><tr><th>Tiempo (s)</th><th>Posición (m)</th><th>Velocidad (m/s)</th><th>Aceleración (m/s²)</th></tr>";
       const pasos = 10;
       let tiempos = [];
       let posiciones = [];
+      let velocidades = [];
+      let aceleraciones = [];
       for (let i = 0; i <= pasos; i++) {
         let t = (tiempoObs / pasos) * i;
         let x = v0 * t + 0.5 * a * Math.pow(t, 2);
+        let v = v0 + a * t;
+        let acc = a;
         tiempos.push(t.toFixed(2));
         posiciones.push(x.toFixed(2));
-        tablaHTML += `<tr><td>${t.toFixed(2)}</td><td>${x.toFixed(2)}</td></tr>`;
+        velocidades.push(v.toFixed(2));
+        aceleraciones.push(acc.toFixed(2));
+        tablaHTML += `<tr><td>${t.toFixed(2)}</td><td>${x.toFixed(2)}</td><td>${v.toFixed(2)}</td><td>${acc.toFixed(2)}</td></tr>`;
       }
       tablaHTML += "</table>";
       document.getElementById("tabla-container").innerHTML = tablaHTML;
 
-      // Gráfico
-      const ctx = document.getElementById("grafico").getContext("2d");
-      if (chart) {
-        chart.destroy();
-      }
-      chart = new Chart(ctx, {
+      // Gráfico Posición vs Tiempo
+      const ctxPos = document.getElementById("graficoPos").getContext("2d");
+      if (chartPos) chartPos.destroy();
+      chartPos = new Chart(ctxPos, {
         type: "line",
         data: {
           labels: tiempos,
@@ -207,24 +220,62 @@
         },
         options: {
           responsive: true,
-          plugins: {
-            legend: {
-              display: true
-            }
-          },
+          plugins: { legend: { display: true } },
           scales: {
-            x: {
-              title: {
-                display: true,
-                text: "Tiempo (s)"
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: "Posición (m)"
-              }
-            }
+            x: { title: { display: true, text: "Tiempo (s)" } },
+            y: { title: { display: true, text: "Posición (m)" } }
+          }
+        }
+      });
+
+      // Gráfico Velocidad vs Tiempo
+      const ctxVel = document.getElementById("graficoVel").getContext("2d");
+      if (chartVel) chartVel.destroy();
+      chartVel = new Chart(ctxVel, {
+        type: "line",
+        data: {
+          labels: tiempos,
+          datasets: [{
+            label: "Velocidad (m/s)",
+            data: velocidades,
+            borderColor: "green",
+            backgroundColor: "lightgreen",
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } },
+          scales: {
+            x: { title: { display: true, text: "Tiempo (s)" } },
+            y: { title: { display: true, text: "Velocidad (m/s)" } }
+          }
+        }
+      });
+
+      // Gráfico Aceleración vs Tiempo
+      const ctxAcc = document.getElementById("graficoAcc").getContext("2d");
+      if (chartAcc) chartAcc.destroy();
+      chartAcc = new Chart(ctxAcc, {
+        type: "line",
+        data: {
+          labels: tiempos,
+          datasets: [{
+            label: "Aceleración (m/s²)",
+            data: aceleraciones,
+            borderColor: "red",
+            backgroundColor: "pink",
+            fill: true,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } },
+          scales: {
+            x: { title: { display: true, text: "Tiempo (s)" } },
+            y: { title: { display: true, text: "Aceleración (m/s²)" } }
           }
         }
       });
@@ -232,3 +283,4 @@
   </script>
 </body>
 </html>
+
