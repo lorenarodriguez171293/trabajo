@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Simulación de Fuerza y Movimiento</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -93,6 +94,9 @@
     th {
       background: #bfdbfe;
     }
+    canvas {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -104,11 +108,11 @@
     <label for="fuerza">Fuerza aplicada (N):</label>
     <input type="number" id="fuerza" value="20" step="0.1">
 
-    <label for="friccion">Coeficiente de fricción (μ):</label>
-    <input type="number" id="friccion" value="0.2" step="0.01">
-
     <label for="velocidad">Velocidad inicial (m/s):</label>
     <input type="number" id="velocidad" value="0" step="0.1">
+
+    <label for="tiempo">Tiempo de observación (s):</label>
+    <input type="number" id="tiempo" value="10" step="0.1">
 
     <button onclick="calcular()">Calcular</button>
 
@@ -120,56 +124,33 @@
     <div class="resultados" id="resultados"></div>
 
     <div id="tabla-container"></div>
+
+    <canvas id="grafico"></canvas>
   </div>
 
   <script>
+    let chart = null;
+
     function calcular() {
       const masa = parseFloat(document.getElementById("masa").value);
       const fuerza = parseFloat(document.getElementById("fuerza").value);
-      const mu = parseFloat(document.getElementById("friccion").value);
       const v0 = parseFloat(document.getElementById("velocidad").value);
-      const g = 9.81;
-
-      const F_friccion = mu * masa * g;
-      const F_neta = fuerza - F_friccion;
-
-      let resultados = "";
-
-      if (F_neta <= 0 && v0 === 0) {
-        resultados += `<p>El objeto no se mueve porque la fuerza neta no supera la fricción y la velocidad inicial es cero.</p>`;
-        document.getElementById("resultados").innerHTML = resultados;
-        document.getElementById("tabla-container").innerHTML = "";
-        return;
-      }
+      const tiempoObs = parseFloat(document.getElementById("tiempo").value);
 
       // Aceleración
-      const a = F_neta / masa;
+      const a = fuerza / masa;
 
-      let distancia, tiempo;
+      // Distancia total en tiempo t
+      const distancia = v0 * tiempoObs + 0.5 * a * Math.pow(tiempoObs, 2);
 
-      if (a > 0) {
-        // Movimiento indefinido (se sigue acelerando)
-        resultados += `<p style="color:red;"><b>Aviso:</b> El objeto seguirá acelerando indefinidamente porque la fuerza neta es positiva.</p>`;
-        distancia = "Infinita";
-        tiempo = "Infinito";
-      } else {
-        // El objeto se detendrá: usamos ecuaciones de MRUA
-        tiempo = v0 / Math.abs(a);
-        distancia = v0 * tiempo + 0.5 * a * Math.pow(tiempo, 2);
-      }
+      // Trabajo de la fuerza
+      const trabajo = fuerza * distancia;
 
-      // Trabajo realizado (solo mientras hay movimiento)
-      let trabajo;
-      if (distancia === "Infinita") {
-        trabajo = "Infinito";
-      } else {
-        trabajo = fuerza * distancia;
-      }
-
+      // Mostrar resultados
+      let resultados = "";
       resultados += `<p><b>Aceleración neta:</b> ${a.toFixed(2)} m/s²</p>`;
-      resultados += `<p><b>Distancia total recorrida:</b> ${distancia === "Infinita" ? "∞" : distancia.toFixed(2) + " m"}</p>`;
-      resultados += `<p><b>Tiempo hasta detenerse:</b> ${tiempo === "Infinito" ? "∞" : tiempo.toFixed(2) + " s"}</p>`;
-      resultados += `<p><b>Trabajo realizado por la fuerza:</b> ${trabajo === "Infinito" ? "∞" : trabajo.toFixed(2) + " J"}</p>`;
+      resultados += `<p><b>Distancia recorrida en ${tiempoObs} s:</b> ${distancia.toFixed(2)} m</p>`;
+      resultados += `<p><b>Trabajo realizado por la fuerza:</b> ${trabajo.toFixed(2)} J</p>`;
 
       document.getElementById("resultados").innerHTML = resultados;
 
@@ -179,34 +160,74 @@
       let start = null;
       const duracionAnim = 4000;
 
-      if (distancia !== "Infinita") {
-        function animar(timestamp) {
-          if (!start) start = timestamp;
-          const progreso = (timestamp - start) / duracionAnim;
-          const x = Math.min(progreso * distancia * 5, distancia * 5);
-          objeto.style.left = x + "px";
-          if (progreso < 1) {
-            requestAnimationFrame(animar);
+      function animar(timestamp) {
+        if (!start) start = timestamp;
+        const progreso = (timestamp - start) / duracionAnim;
+        const x = Math.min(progreso * distancia * 5, distancia * 5);
+        objeto.style.left = x + "px";
+        if (progreso < 1) {
+          requestAnimationFrame(animar);
+        }
+      }
+      requestAnimationFrame(animar);
+
+      // Tabla de datos
+      let tablaHTML = "<h3>Datos experimentales simulados</h3>";
+      tablaHTML += "<table><tr><th>Tiempo (s)</th><th>Posición (m)</th></tr>";
+      const pasos = 10;
+      let tiempos = [];
+      let posiciones = [];
+      for (let i = 0; i <= pasos; i++) {
+        let t = (tiempoObs / pasos) * i;
+        let x = v0 * t + 0.5 * a * Math.pow(t, 2);
+        tiempos.push(t.toFixed(2));
+        posiciones.push(x.toFixed(2));
+        tablaHTML += `<tr><td>${t.toFixed(2)}</td><td>${x.toFixed(2)}</td></tr>`;
+      }
+      tablaHTML += "</table>";
+      document.getElementById("tabla-container").innerHTML = tablaHTML;
+
+      // Gráfico
+      const ctx = document.getElementById("grafico").getContext("2d");
+      if (chart) {
+        chart.destroy();
+      }
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: tiempos,
+          datasets: [{
+            label: "Posición (m)",
+            data: posiciones,
+            borderColor: "blue",
+            backgroundColor: "lightblue",
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Tiempo (s)"
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: "Posición (m)"
+              }
+            }
           }
         }
-        requestAnimationFrame(animar);
-      }
-
-      // Crear tabla Tiempo vs Posición si el movimiento es finito
-      if (distancia !== "Infinita") {
-        let tablaHTML = "<h3>Datos experimentales simulados</h3>";
-        tablaHTML += "<table><tr><th>Tiempo (s)</th><th>Posición (m)</th></tr>";
-        const pasos = 10;
-        for (let i = 0; i <= pasos; i++) {
-          let t = (tiempo / pasos) * i;
-          let x = v0 * t + 0.5 * a * Math.pow(t, 2);
-          tablaHTML += `<tr><td>${t.toFixed(2)}</td><td>${x.toFixed(2)}</td></tr>`;
-        }
-        tablaHTML += "</table>";
-        document.getElementById("tabla-container").innerHTML = tablaHTML;
-      } else {
-        document.getElementById("tabla-container").innerHTML = "";
-      }
+      });
     }
   </script>
 </body>
