@@ -16,7 +16,7 @@
       color: #1e3a8a;
     }
     .container {
-      max-width: 700px;
+      max-width: 750px;
       margin: auto;
       background: white;
       padding: 20px;
@@ -85,6 +85,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
+      font-size: 14px;
     }
     th, td {
       border: 1px solid #ccc;
@@ -133,12 +134,16 @@
 
     <h3>Gráfico Aceleración vs Tiempo</h3>
     <canvas id="graficoAcc"></canvas>
+
+    <h3>Gráfico Impulso (Δp) vs Tiempo</h3>
+    <canvas id="graficoImpulso"></canvas>
   </div>
 
   <script>
     let chartPos = null;
     let chartVel = null;
     let chartAcc = null;
+    let chartImpulso = null;
 
     function calcular() {
       const masa = parseFloat(document.getElementById("masa").value);
@@ -149,21 +154,25 @@
       // Aceleración
       const a = fuerza / masa;
 
-      // Distancia total en tiempo t
+      // Distancia total
       const distancia = v0 * tiempoObs + 0.5 * a * Math.pow(tiempoObs, 2);
 
-      // Trabajo de la fuerza
+      // Trabajo
       const trabajo = fuerza * distancia;
+
+      // Impulso total
+      const impulso = fuerza * tiempoObs;
 
       // Mostrar resultados
       let resultados = "";
       resultados += `<p><b>Aceleración neta:</b> ${a.toFixed(2)} m/s²</p>`;
       resultados += `<p><b>Distancia recorrida en ${tiempoObs} s:</b> ${distancia.toFixed(2)} m</p>`;
       resultados += `<p><b>Trabajo realizado por la fuerza:</b> ${trabajo.toFixed(2)} J</p>`;
+      resultados += `<p><b>Impulso total de la fuerza:</b> ${impulso.toFixed(2)} N·s</p>`;
 
       document.getElementById("resultados").innerHTML = resultados;
 
-      // Animación del objeto
+      // Animación objeto
       const objeto = document.getElementById("objeto");
       objeto.style.left = "0px";
       let start = null;
@@ -180,24 +189,36 @@
       }
       requestAnimationFrame(animar);
 
-      // Tabla de datos + arrays para gráficos
+      // Tabla de datos
       let tablaHTML = "<h3>Datos experimentales simulados</h3>";
-      tablaHTML += "<table><tr><th>Tiempo (s)</th><th>Posición (m)</th><th>Velocidad (m/s)</th><th>Aceleración (m/s²)</th></tr>";
+      tablaHTML += "<table><tr><th>Tiempo (s)</th><th>Posición (m)</th><th>Velocidad (m/s)</th><th>Aceleración (m/s²)</th><th>Δp (kg·m/s)</th></tr>";
       const pasos = 10;
       let tiempos = [];
       let posiciones = [];
       let velocidades = [];
       let aceleraciones = [];
+      let momentos = [];
+
       for (let i = 0; i <= pasos; i++) {
         let t = (tiempoObs / pasos) * i;
         let x = v0 * t + 0.5 * a * Math.pow(t, 2);
         let v = v0 + a * t;
         let acc = a;
+        let deltaP = masa * (v - v0);
+
         tiempos.push(t.toFixed(2));
         posiciones.push(x.toFixed(2));
         velocidades.push(v.toFixed(2));
         aceleraciones.push(acc.toFixed(2));
-        tablaHTML += `<tr><td>${t.toFixed(2)}</td><td>${x.toFixed(2)}</td><td>${v.toFixed(2)}</td><td>${acc.toFixed(2)}</td></tr>`;
+        momentos.push(deltaP.toFixed(2));
+
+        tablaHTML += `<tr>
+                        <td>${t.toFixed(2)}</td>
+                        <td>${x.toFixed(2)}</td>
+                        <td>${v.toFixed(2)}</td>
+                        <td>${acc.toFixed(2)}</td>
+                        <td>${deltaP.toFixed(2)}</td>
+                      </tr>`;
       }
       tablaHTML += "</table>";
       document.getElementById("tabla-container").innerHTML = tablaHTML;
@@ -218,14 +239,7 @@
             tension: 0.2
           }]
         },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: true } },
-          scales: {
-            x: { title: { display: true, text: "Tiempo (s)" } },
-            y: { title: { display: true, text: "Posición (m)" } }
-          }
-        }
+        options: { responsive: true }
       });
 
       // Gráfico Velocidad vs Tiempo
@@ -244,14 +258,7 @@
             tension: 0.2
           }]
         },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: true } },
-          scales: {
-            x: { title: { display: true, text: "Tiempo (s)" } },
-            y: { title: { display: true, text: "Velocidad (m/s)" } }
-          }
-        }
+        options: { responsive: true }
       });
 
       // Gráfico Aceleración vs Tiempo
@@ -270,17 +277,28 @@
             tension: 0.1
           }]
         },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: true } },
-          scales: {
-            x: { title: { display: true, text: "Tiempo (s)" } },
-            y: { title: { display: true, text: "Aceleración (m/s²)" } }
-          }
-        }
+        options: { responsive: true }
+      });
+
+      // Gráfico Impulso (Δp) vs Tiempo
+      const ctxImp = document.getElementById("graficoImpulso").getContext("2d");
+      if (chartImpulso) chartImpulso.destroy();
+      chartImpulso = new Chart(ctxImp, {
+        type: "line",
+        data: {
+          labels: tiempos,
+          datasets: [{
+            label: "Δp (kg·m/s)",
+            data: momentos,
+            borderColor: "purple",
+            backgroundColor: "violet",
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: { responsive: true }
       });
     }
   </script>
 </body>
 </html>
-
